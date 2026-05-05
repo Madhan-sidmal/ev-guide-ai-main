@@ -1,4 +1,4 @@
-import type { Location, RouteData, EVModel, ChargingStation } from '@/types';
+import type { Location, RouteData, AlternateRoute, EVModel, ChargingStation } from '@/types';
 
 const OSRM_BASE = 'https://router.project-osrm.org';
 
@@ -8,14 +8,64 @@ interface OSRMRoute {
   geometry: { coordinates: [number, number][] };
 }
 
-export const calculateRoute = async (
+/* ── Battery Prediction ─────────────────────────────────────── */
+const predictBattery = (
+  distanceKm: number,
+  evModel: EVModel,
+  batteryPercentage: number,
+  weatherImpact: number
+) => {
+  const energyNeeded = distanceKm * evModel.efficiency; // kWh
+  const batteryUsedPercent = (energyNeeded / evModel.batteryCapacity) * 100;
+  const totalConsumption = Math.min(batteryUsedPercent * (1 + weatherImpact / 100), 100);
+  const remainingBattery = Math.max(batteryPercentage - totalConsumption, 0);
+  const isReachable = remainingBattery > 5;
+  const efficiency = Math.round(Math.max(100 - totalConsumption / batteryPercentage * 30, 40));
+
+  return { totalConsumption, remainingBattery, isReachable, efficiency };
+};
+
+/* ── Parse OSRM route into RouteData ────────────────────────── */
+const parseRoute = (
+  osrm: OSRMRoute,
+  source: Location,
+  destination: Location,
+  evModel: EVModel,
+  batteryPercentage: number,
+  id: string
+): RouteData => {
+  const distanceKm = Math.round((osrm.distance / 1000) * 10) / 10;
+  const durationMin = Math.round(osrm.duration / 60);
+  const geometry: [number, number][] = osrm.geometry.coordinates.map(
+    ([lng, lat]) => [lat, lng]
+  );
+  const weatherImpact = Math.round(2 + Math.random() * 6);
+  const battery = predictBattery(distanceKm, evModel, batteryPercentage, weatherImpact);
+
+  return {
+    id,
+    source,
+    destination,
+    distance: distanceKm,
+    duration: durationMin,
+    geometry,
+    batteryConsumption: Math.round(battery.totalConsumption * 10) / 10,
+    remainingBattery: Math.round(battery.remainingBattery * 10) / 10,
+    efficiency: battery.efficiency,
+    weatherImpact,
+    isReachable: battery.isReachable,
+  };
+};
+
+/* ── Multi-Route Calculation ────────────────────────────────── */
+export const calculateMultiRoute = async (
   source: Location,
   destination: Location,
   evModel: EVModel,
   batteryPercentage: number
-): Promise<RouteData> => {
+): Promise<{ primary: RouteData; alternates: AlternateRoute[] }> => {
   const res = await fetch(
-    `${OSRM_BASE}/route/v1/driving/${source.lng},${source.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson&steps=true`
+    `${OSRM_BASE}/route/v1/driving/${source.lng},${source.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson&steps=true&alternatives=3`
   );
 
   if (!res.ok) throw new Error('Failed to calculate route');
@@ -23,42 +73,31 @@ export const calculateRoute = async (
 
   if (!data.routes?.length) throw new Error('No route found');
 
-  const osrmRoute: OSRMRoute = data.routes[0];
-  const distanceKm = osrmRoute.distance / 1000;
-  const durationMin = Math.round(osrmRoute.duration / 60);
+  const labels = ['Fastest Route', 'Eco Route', 'Scenic Route'];
+  const tagEmojis = ['🏎️', '🌿', '🏞️'];
 
-  // Convert GeoJSON [lng,lat] to [lat,lng] for Leaflet
-  const geometry: [number, number][] = osrmRoute.geometry.coordinates.map(
-    ([lng, lat]) => [lat, lng]
-  );
+  const primary = parseRoute(data.routes[0], source, destination, evModel, batteryPercentage, `route-0`);
 
-  // Battery prediction based on EV model efficiency
-  const energyNeeded = distanceKm * evModel.efficiency; // kWh
-  const batteryUsedPercent = (energyNeeded / evModel.batteryCapacity) * 100;
+  const alternates: AlternateRoute[] = data.routes.slice(1, 4).map((r: OSRMRoute, i: number) => ({
+    ...parseRoute(r, source, destination, evModel, batteryPercentage, `route-${i + 1}`),
+    label: `${tagEmojis[i]} ${labels[i + 1] || `Alt Route ${i + 1}`}`,
+  }));
 
-  // Weather impact simulation (random 2-8% for realism)
-  const weatherImpact = Math.round(2 + Math.random() * 6);
-  const totalConsumption = Math.min(batteryUsedPercent * (1 + weatherImpact / 100), 100);
-  const remainingBattery = Math.max(batteryPercentage - totalConsumption, 0);
-  const isReachable = remainingBattery > 5;
-  const efficiency = Math.round(Math.max(100 - totalConsumption / batteryPercentage * 30, 40));
-
-  return {
-    id: Date.now().toString(),
-    source,
-    destination,
-    distance: Math.round(distanceKm * 10) / 10,
-    duration: durationMin,
-    geometry,
-    batteryConsumption: Math.round(totalConsumption * 10) / 10,
-    remainingBattery: Math.round(remainingBattery * 10) / 10,
-    efficiency,
-    weatherImpact,
-    isReachable,
-  };
+  return { primary, alternates };
 };
 
-// Generate simulated charging stations along the route
+/* ── Single route (backwards-compatible) ────────────────────── */
+export const calculateRoute = async (
+  source: Location,
+  destination: Location,
+  evModel: EVModel,
+  batteryPercentage: number
+): Promise<RouteData> => {
+  const { primary } = await calculateMultiRoute(source, destination, evModel, batteryPercentage);
+  return primary;
+};
+
+/* ── Charging Stations along a route ────────────────────────── */
 export const generateChargingStations = (geometry: [number, number][], distance: number): ChargingStation[] => {
   const stations: ChargingStation[] = [];
   const numStations = Math.max(2, Math.floor(distance / 80));
@@ -68,7 +107,6 @@ export const generateChargingStations = (geometry: [number, number][], distance:
   for (let i = 0; i < numStations; i++) {
     const idx = Math.floor((geometry.length / (numStations + 1)) * (i + 1));
     const point = geometry[Math.min(idx, geometry.length - 1)];
-    // Offset slightly for realism
     const lat = point[0] + (Math.random() - 0.5) * 0.02;
     const lng = point[1] + (Math.random() - 0.5) * 0.02;
 
