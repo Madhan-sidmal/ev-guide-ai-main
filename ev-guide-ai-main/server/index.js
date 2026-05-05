@@ -39,8 +39,11 @@ app.use('/api/*', (req, res) => {
 });
 
 // ── Serve Frontend (Production) ────────────────────────────────
-// In production (Cloud Run), the built React app is in ./public
-const publicPath = path.join(__dirname, 'public');
+// Docker: ./public | Render: ../dist
+const fs = require('fs');
+const publicPath = fs.existsSync(path.join(__dirname, 'public', 'index.html'))
+  ? path.join(__dirname, 'public')
+  : path.join(__dirname, '..', 'dist');
 app.use(express.static(publicPath));
 
 // SPA fallback — all non-API routes serve index.html

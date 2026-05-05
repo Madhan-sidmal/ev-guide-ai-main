@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: ev-guide-ai
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm install --legacy-peer-deps && npm run build && cd server && npm install
+    startCommand: cd server && node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        value: pseudo-coders-hackathon-2026-secret
+      - key: LEARNING_RATE
+        value: "0.1"
