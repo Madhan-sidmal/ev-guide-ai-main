@@ -10,8 +10,11 @@
 [![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://sqlite.org/)
 [![Three.js](https://img.shields.io/badge/Three.js-3D_Sim-000000?style=flat-square&logo=threedotjs&logoColor=white)](https://threejs.org/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-pseudo--coders.onrender.com-blue?style=flat-square)](https://pseudo-coders.onrender.com)
 
 *A system that doesn't just predict your range — it **learns** from every journey.*
+
+### 🌐 [Live Demo → https://pseudo-coders.onrender.com](https://pseudo-coders.onrender.com)
 
 [Features](#-features) · [Architecture](#-architecture) · [Getting Started](#-getting-started) · [API Reference](#-api-reference) · [Tech Stack](#-tech-stack) · [Team](#-team)
 
