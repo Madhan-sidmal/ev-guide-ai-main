@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+# Pseudo Coders - EV Guide AI
 
 TODO: Document your project here
