@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -19,7 +20,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Routes ─────────────────────────────────────────────────────
+// ── API Routes ─────────────────────────────────────────────────
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/vehicles', require('./routes/vehicles'));
 app.use('/api/ev-models', require('./routes/evModels'));
@@ -32,9 +33,19 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
 });
 
-// ── 404 Handler ────────────────────────────────────────────────
+// ── API 404 Handler ────────────────────────────────────────────
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: `Route not found: ${req.method} ${req.path}` });
+});
+
+// ── Serve Frontend (Production) ────────────────────────────────
+// In production (Cloud Run), the built React app is in ./public
+const publicPath = path.join(__dirname, 'public');
+app.use(express.static(publicPath));
+
+// SPA fallback — all non-API routes serve index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 // ── Seed Data ──────────────────────────────────────────────────
@@ -42,8 +53,9 @@ const { seedEVModels } = require('./seed');
 seedEVModels();
 
 // ── Start Server ───────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`\n⚡ EV Guide AI Backend running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n⚡ EV Guide AI running on http://localhost:${PORT}`);
   console.log(`   Health: http://localhost:${PORT}/api/health`);
-  console.log(`   EV Models: http://localhost:${PORT}/api/ev-models\n`);
+  console.log(`   EV Models: http://localhost:${PORT}/api/ev-models`);
+  console.log(`   Mode: ${process.env.NODE_ENV || 'development'}\n`);
 });
