@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { useAppStore } from '@/store/appStore';
@@ -14,8 +14,16 @@ const navLinks = [
 
 export const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isAuthenticated = useAppStore((s) => s.isAuthenticated);
+  const user = useAppStore((s) => s.user);
+  const logout = useAppStore((s) => s.logout);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <motion.nav
@@ -60,9 +68,22 @@ export const Navbar = () => {
 
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
-              <Link to="/profile" className="btn-primary text-sm py-2">
-                Profile
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link to="/profile" className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-muted transition-colors">
+                  <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span className="text-xs font-bold text-primary">
+                      {user?.name?.charAt(0)?.toUpperCase() || '?'}
+                    </span>
+                  </div>
+                  <span className="text-sm font-medium">{user?.name || 'User'}</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="text-sm font-medium text-muted-foreground hover:text-destructive transition-colors px-3 py-1.5 rounded-lg hover:bg-destructive/10"
+                >
+                  Logout
+                </button>
+              </div>
             ) : (
               <>
                 <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
@@ -113,7 +134,27 @@ export const Navbar = () => {
               </Link>
             ))}
             <div className="pt-2 border-t border-border space-y-2">
-              {!isAuthenticated && (
+              {isAuthenticated ? (
+                <>
+                  <div className="flex items-center gap-2 px-4 py-2">
+                    <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
+                      <span className="text-xs font-bold text-primary">
+                        {user?.name?.charAt(0)?.toUpperCase() || '?'}
+                      </span>
+                    </div>
+                    <span className="text-sm font-medium">{user?.name || 'User'}</span>
+                  </div>
+                  <Link to="/profile" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted rounded-lg">
+                    Profile
+                  </Link>
+                  <button
+                    onClick={() => { handleLogout(); setMobileOpen(false); }}
+                    className="block w-full text-left px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
                 <>
                   <Link to="/login" onClick={() => setMobileOpen(false)} className="block px-4 py-2 text-sm font-medium text-muted-foreground">
                     Log in

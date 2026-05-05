@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageLoader } from "@/components/ui/Loader";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -29,17 +30,21 @@ const App = () => (
       <BrowserRouter>
         <Suspense fallback={<PageLoader />}>
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/results" element={<RouteResults />} />
-            <Route path="/map" element={<MapPage />} />
-            <Route path="/analytics" element={<AnalyticsDashboard />} />
-            <Route path="/charging" element={<ChargingStationsPage />} />
-            <Route path="/history" element={<TripHistory />} />
-            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+            {/* Protected routes — require authentication */}
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/results" element={<ProtectedRoute><RouteResults /></ProtectedRoute>} />
+            <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
+            <Route path="/charging" element={<ProtectedRoute><ChargingStationsPage /></ProtectedRoute>} />
+            <Route path="/history" element={<ProtectedRoute><TripHistory /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

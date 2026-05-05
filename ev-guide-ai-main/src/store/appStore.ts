@@ -51,6 +51,7 @@ interface AppState {
   setError: (error: string | null) => void;
   setSimulationProgress: (progress: number) => void;
   resetTrip: () => void;
+  logout: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -99,6 +100,22 @@ export const useAppStore = create<AppState>()(
           analytics: null,
           simulationProgress: 0,
         }),
+      logout: () => {
+        localStorage.removeItem('auth_token');
+        set({
+          user: null,
+          isAuthenticated: false,
+          tripHistory: [],
+          currentRoute: null,
+          alternateRoutes: [],
+          weather: null,
+          chargingStations: [],
+          analytics: null,
+          selectedEVModel: null,
+          evModels: [],
+          simulationProgress: 0,
+        });
+      },
     }),
     {
       name: 'ev-range-predictor',

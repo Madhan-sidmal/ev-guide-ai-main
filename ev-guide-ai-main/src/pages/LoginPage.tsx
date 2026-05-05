@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '@/api/services';
 import { useAppStore } from '@/store/appStore';
 import { useToast } from '@/hooks/use-toast';
@@ -11,7 +11,11 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const { setUser, setIsAuthenticated } = useAppStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  // Where to redirect after login (default: /dashboard)
+  const from = (location.state as { from?: string })?.from || '/dashboard';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +25,8 @@ const LoginPage = () => {
       localStorage.setItem('auth_token', data.token);
       setUser(data.user);
       setIsAuthenticated(true);
-      navigate('/dashboard');
+      toast({ title: '✅ Welcome back!', description: `Signed in as ${data.user.name}` });
+      navigate(from, { replace: true });
     } catch (err) {
       toast({ title: 'Login Failed', description: 'Invalid credentials. Please try again.', variant: 'destructive' });
     } finally {
@@ -43,6 +48,11 @@ const LoginPage = () => {
           </Link>
           <h1 className="font-display text-2xl font-bold">Welcome back</h1>
           <p className="text-muted-foreground text-sm mt-1">Sign in to your account to continue</p>
+          {from !== '/dashboard' && (
+            <p className="text-xs text-primary mt-2 bg-primary/10 rounded-lg px-3 py-1.5 inline-block">
+              🔒 Please sign in to access that page
+            </p>
+          )}
         </div>
 
         <form onSubmit={handleLogin} className="card-elevated p-6 space-y-4">
@@ -52,7 +62,7 @@ const LoginPage = () => {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="input-field" required />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="input-field" required minLength={6} />
           </div>
           <div className="flex justify-end">
             <Link to="/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link>

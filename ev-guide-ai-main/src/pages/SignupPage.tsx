@@ -57,7 +57,7 @@ const SignupPage = () => {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="input-field" required minLength={8} />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="input-field" required minLength={6} />
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-50">
             {loading ? 'Creating account...' : 'Create Account'}
